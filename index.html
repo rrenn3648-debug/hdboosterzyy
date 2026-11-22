@@ -1,0 +1,227 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HD BOOSTER ZYY</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#080808;color:white;font-family:Arial,sans-serif}
+header{text-align:center;padding:30px 10px;background:#111}
+h1{font-size:29px;font-weight:900}
+h1 span{color:#b7ff38}
+header p{color:#999;font-size:12px}
+main{max-width:600px;margin:25px auto;padding:15px}
+.card{background:#151515;border:1px solid #292929;border-radius:18px;padding:18px}
+.upload{display:block;border:2px dashed #555;border-radius:15px;padding:35px 10px;text-align:center;cursor:pointer;background:#0b0b0b}
+.upload b{color:#b7ff38;font-size:18px}
+.upload p{font-size:12px;color:#999}
+input[type=file]{display:none}
+#preview{display:none;width:100%;max-height:400px;object-fit:contain;margin-top:18px;border-radius:12px}
+.control{background:#0d0d0d;padding:13px;border-radius:12px;margin-top:12px}
+.control label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:10px}
+output{color:#b7ff38}
+input[type=range]{width:100%;accent-color:#b7ff38}
+select{width:100%;padding:12px;background:#111;color:white;border:1px solid #444;border-radius:9px}
+button{width:100%;padding:15px;border:0;border-radius:10px;font-weight:bold;cursor:pointer;margin-top:15px;font-size:14px}
+.primary{background:#b7ff38;color:#080808}
+.secondary{background:#292929;color:white}
+button:disabled{opacity:.4}
+#status{font-size:12px;color:#b7ff38;margin-top:12px}
+footer{text-align:center;color:#666;font-size:11px;padding:20px}
+</style>
+</head>
+<body>
+
+<header>
+<h1>HD BOOSTER <span>ZYY</span></h1>
+<p>PHOTO ENHANCER • HD QUALITY</p>
+</header>
+
+<main>
+<div class="card">
+
+<label class="upload" for="photo">
+<div style="font-size:35px">＋</div>
+<b>PILIH FOTO</b>
+<p>Upload foto JPG, PNG atau WEBP</p>
+</label>
+
+<input type="file" id="photo" accept="image/*">
+<img id="preview" alt="Preview foto">
+
+<div class="control">
+<label>Ketajaman <output id="sharpV">40%</output></label>
+<input type="range" id="sharp" min="0" max="100" value="40">
+</div>
+
+<div class="control">
+<label>Kejernihan <output id="clearV">30%</output></label>
+<input type="range" id="clear" min="0" max="100" value="30">
+</div>
+
+<div class="control">
+<label>Kontras <output id="contrastV">15%</output></label>
+<input type="range" id="contrast" min="0" max="100" value="15">
+</div>
+
+<div class="control">
+<label>Kecerahan <output id="brightV">0%</output></label>
+<input type="range" id="bright" min="-30" max="30" value="0">
+</div>
+
+<div class="control">
+<label>Resolusi Foto</label>
+<select id="scale">
+<option value="1">Original</option>
+<option value="2" selected>HD 2X</option>
+<option value="4">ULTRA HD 4X</option>
+</select>
+</div>
+
+<button class="primary" id="enhance" disabled>
+TINGKATKAN KUALITAS FOTO
+</button>
+
+<button class="secondary" id="reset" disabled>
+RESET PENGATURAN
+</button>
+
+<div id="status"></div>
+</div>
+</main>
+
+<footer>HD BOOSTER ZYY © 2026</footer>
+
+<script>
+const $=id=>document.getElementById(id);
+let img=null;
+
+['sharp','clear','contrast','bright'].forEach(id=>{
+ $(id).oninput=()=>{
+  $(id+'V').textContent=$(id).value+'%';
+ };
+});
+
+$('photo').onchange=e=>{
+ const file=e.target.files[0];
+ if(!file)return;
+ if(!file.type.startsWith('image/')){
+  $('status').textContent='File bukan gambar!';
+  return;
+ }
+ const url=URL.createObjectURL(file);
+ const image=new Image();
+ image.onload=()=>{
+  img=image;
+  $('preview').src=url;
+  $('preview').style.display='block';
+  $('enhance').disabled=false;
+  $('reset').disabled=false;
+  $('status').textContent='Foto berhasil dimuat!';
+ };
+ image.onerror=()=>{
+  URL.revokeObjectURL(url);
+  $('status').textContent='Gagal membuka foto.';
+ };
+ image.src=url;
+};
+
+function sharpen(ctx,w,h,amount){
+ if(amount<=0)return;
+ const data=ctx.getImageData(0,0,w,h);
+ const src=data.data;
+ const out=new Uint8ClampedArray(src);
+ const strength=amount/100*.65;
+
+ for(let y=1;y<h-1;y++){
+  for(let x=1;x<w-1;x++){
+   const i=(y*w+x)*4;
+   for(let c=0;c<3;c++){
+    const avg=(
+     src[i-4+c]+src[i+4+c]+
+     src[i-w*4+c]+src[i+w*4+c]
+    )/4;
+    out[i+c]=src[i+c]+(src[i+c]-avg)*strength;
+   }
+  }
+ }
+ data.data.set(out);
+ ctx.putImageData(data,0,0);
+}
+
+$('enhance').onclick=()=>{
+ if(!img)return;
+ $('enhance').disabled=true;
+ $('status').textContent='Memproses foto...';
+
+ setTimeout(()=>{
+ try{
+  const scale=Number($('scale').value);
+  const w=img.naturalWidth*scale;
+  const h=img.naturalHeight*scale;
+
+  if(w*h>30000000){
+   throw new Error('Ukuran terlalu besar. Gunakan HD 2X.');
+  }
+
+  const canvas=document.createElement('canvas');
+  canvas.width=w;
+  canvas.height=h;
+
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingQuality='high';
+
+  const contrast=100+Number($('contrast').value);
+  const brightness=100+Number($('bright').value);
+  const clarity=100+Number($('clear').value)*0.12;
+
+  ctx.filter=`contrast(${contrast}%) brightness(${brightness}%) saturate(${clarity}%)`;
+  ctx.drawImage(img,0,0,w,h);
+  ctx.filter='none';
+
+  sharpen(ctx,w,h,Number($('sharp').value));
+
+  canvas.toBlob(blob=>{
+   if(!blob){
+    $('status').textContent='Gagal menyimpan foto.';
+    $('enhance').disabled=false;
+    return;
+   }
+
+   const url=URL.createObjectURL(blob);
+   const a=document.createElement('a');
+   a.href=url;
+   a.download='HD-BOOSTER-ZYY.jpg';
+   a.click();
+
+   setTimeout(()=>URL.revokeObjectURL(url),3000);
+   $('status').textContent='Berhasil! Foto HD sudah disimpan.';
+   $('enhance').disabled=false;
+  },'image/jpeg',0.95);
+
+ }catch(err){
+  $('status').textContent=err.message||'Terjadi kesalahan.';
+  $('enhance').disabled=false;
+ }
+ },50);
+};
+
+$('reset').onclick=()=>{
+ $('sharp').value=40;
+ $('clear').value=30;
+ $('contrast').value=15;
+ $('bright').value=0;
+ ['sharp','clear','contrast','bright'].forEach(id=>{
+  $(id).dispatchEvent(new Event('input'));
+ });
+ $('scale').value='2';
+ $('status').textContent='Pengaturan berhasil direset.';
+};
+</script>
+
+</body>
+  </html>
+  
